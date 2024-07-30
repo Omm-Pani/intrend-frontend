@@ -18,7 +18,7 @@ export default function EmailCreator() {
 
   const handleSubmit = () => {
     const response = axios.post(
-      'http://localhost:5000/send-email',
+      `${process.env.SERVER_URL}/send-email`,
       {
         from: emailObj.from,
         to: to,

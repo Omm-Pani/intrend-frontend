@@ -29,7 +29,7 @@ export default function FbPostCreator() {
 
   useEffect(() => {
     axios
-      .get('http://localhost:5000/list-pages', {
+      .get(`${process.env.SERVER_URL}/list-pages`, {
         withCredentials: true,
       })
       .then((response) => {
@@ -40,7 +40,7 @@ export default function FbPostCreator() {
 
   const handlePost = async () => {
     await axios
-      .post('http://localhost:5000/create-post', {
+      .post(`${process.env.SERVER_URL}/create-post`, {
         page_names: pagesSelected,
         message: content,
         img_urls: imageUrls,
@@ -64,7 +64,7 @@ export default function FbPostCreator() {
       }));
 
       // Get pre-signed URLs from the backend
-      const response = await axios.post('http://localhost:5000/s3Urls', {
+      const response = await axios.post(`${process.env.SERVER_URL}/s3Urls`, {
         files: filesData,
       });
 
@@ -100,7 +100,7 @@ export default function FbPostCreator() {
   const handleRemoveImage = async (imageUrl: string) => {
     try {
       const response = await axios.post(
-        'http://localhost:5000/delete-s3-images',
+        `${process.env.SERVER_URL}/delete-s3-images`,
         {
           keys: [getImageKey(imageUrl)],
         }

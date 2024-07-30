@@ -59,7 +59,7 @@ function Page() {
   const handleIntegration = (integration: string) => () => {
     switch (integration) {
       case 'Facebook':
-        window.location.href = 'http://localhost:5000/auth/facebook';
+        window.location.href = `${process.env.SERVER_URL}/auth/facebook`;
 
         break;
       case 'Gmail':
@@ -67,7 +67,7 @@ function Page() {
 
         break;
       case 'Youtube':
-        window.location.href = 'http://localhost:5000/youtube/auth';
+        window.location.href = `${process.env.SERVER_URL}/youtube/auth`;
 
         break;
 
