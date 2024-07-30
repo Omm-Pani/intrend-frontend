@@ -30,6 +30,7 @@ const INITIAL_INTEGRATION_LIST = [
 
 function Page() {
   const dispatch = useDispatch();
+  console.log(process.env.NEXT_PUBLIC_SERVER_URL);
 
   const [integrationList, setIntegrationList] = useState(
     INITIAL_INTEGRATION_LIST
@@ -59,7 +60,7 @@ function Page() {
   const handleIntegration = (integration: string) => () => {
     switch (integration) {
       case 'Facebook':
-        window.location.href = `${process.env.SERVER_URL}/auth/facebook`;
+        window.location.href = `${process.env.NEXT_PUBLIC_SERVER_URL}/auth/facebook`;
 
         break;
       case 'Gmail':
@@ -67,7 +68,7 @@ function Page() {
 
         break;
       case 'Youtube':
-        window.location.href = `${process.env.SERVER_URL}/youtube/auth`;
+        window.location.href = `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/auth`;
 
         break;
 

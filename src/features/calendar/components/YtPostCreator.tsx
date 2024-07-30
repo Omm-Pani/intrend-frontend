@@ -37,7 +37,7 @@ export default function YtPostCreator() {
 
   const handlePost = async () => {
     const response = await axios
-      .post(`${process.env.SERVER_URL}/youtube/upload/video`, {
+      .post(`${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/upload/video`, {
         title: ytPostObj.post_title,
         description: ytPostObj.post_description,
         tags: ytPostObj.post_tags,
@@ -70,7 +70,7 @@ export default function YtPostCreator() {
 
       // Get pre-signed URL from the backend
       const response = await axios.post(
-        `${process.env.SERVER_URL}/youtube/s3ThumbnailUrl`,
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/s3ThumbnailUrl`,
         {
           file: fileData,
         }
@@ -118,7 +118,7 @@ export default function YtPostCreator() {
 
       // Get pre-signed URL from the backend
       const response = await axios.post(
-        `${process.env.SERVER_URL}/youtube/s3VideoUrl`,
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/s3VideoUrl`,
         {
           file: fileData,
         }
@@ -151,7 +151,7 @@ export default function YtPostCreator() {
   const handleRemoveImage = async (imageUrl: string) => {
     try {
       const response = await axios.post(
-        `${process.env.SERVER_URL}/delete-s3-images`,
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/delete-s3-images`,
         {
           keys: [getImageKey(imageUrl)],
         }
