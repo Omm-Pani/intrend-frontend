@@ -21,6 +21,9 @@ export default function PublicLayout({
     if (!isLoading && isAuthenticated && pathname === '/login') {
       router.replace(`/dashboard`);
     }
+    if (!isLoading && isAuthenticated && pathname === '/signup') {
+      router.replace(`/dashboard`);
+    }
     console.log('public layout...', isAuthenticated, isLoading);
   }, [isAuthenticated, isLoading, router, pathname]);
 

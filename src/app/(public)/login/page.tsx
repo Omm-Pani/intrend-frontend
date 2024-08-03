@@ -6,14 +6,18 @@ import ErrorText from '@/components/typography/error-text';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
+import axios from 'axios';
+import { useAppDispatch } from '@/lib/hooks';
+import { loginUser } from '@/features/common/userSlice';
 
 interface LoginObj {
-  otp: string;
   emailId: string;
+  password: string;
 }
 
 function Login(): JSX.Element {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showLoginPage, setShowLoginPage] = useState<boolean>(true);
@@ -21,49 +25,43 @@ function Login(): JSX.Element {
   const { login } = useAuth();
 
   const [loginObj, setLoginObj] = useState<LoginObj>({
-    otp: '',
     emailId: '',
+    password: '',
   });
 
-  const submitForm = (e: React.FormEvent<HTMLFormElement>): void => {
+  const submitForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage('');
-    if (loading) return;
-    if (isOtpSent) {
-      submitVerificationCode();
-    } else {
-      sendMailOtp();
-    }
-  };
-
-  const sendMailOtp = () => {
     if (loginObj.emailId.trim() === '') {
-      setErrorMessage('Email Id is required! (use any value)');
+      setErrorMessage('Email Id is required!');
+      return;
+    } else if (loginObj.password.trim() === '') {
+      setErrorMessage('Password is required!');
       return;
     } else {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsOtpSent(true);
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/user/signin`,
+        loginObj,
+        {
+          withCredentials: true,
+        }
+      );
+
+      if (response.status === 200) {
+        const { message, ...rest } = response.data;
+        console.log('userData', rest);
+        dispatch(loginUser(rest));
+        userLogin({ token: rest.token });
         setLoading(false);
-      }, 1000);
+        setErrorMessage('');
+      } else {
+        setLoading(false);
+        setErrorMessage(response.data.message);
+      }
     }
   };
 
-  const submitVerificationCode = () => {
-    if (loginObj.otp.trim() === '') {
-      setErrorMessage('OTP is required! (use any value)');
-      return;
-    } else {
-      setLoading(true);
-      // Simulate API call
-      setTimeout(() => {
-        loginUser({ token: 'asdsadsddsad$$token' });
-      }, 2000);
-    }
-  };
-
-  const loginUser = async ({ token }: { token: string }) => {
+  const userLogin = async ({ token }: { token: string }) => {
     await login(token);
   };
 
@@ -82,44 +80,38 @@ function Login(): JSX.Element {
           <div className="py-24 px-10">
             <form onSubmit={(e) => submitForm(e)}>
               <div className="mb-4">
-                {!isOtpSent && (
-                  <>
-                    <p className="text-center text-lg   md:mt-0 mt-6 mb-12  font-semibold">
-                      Enter Email ID to Continue
+                <>
+                  <div className="md:mt-0 mt-6 mb-12">
+                    <p className="text-center text-2xl font-bold">
+                      Login to your Account
                     </p>
-
-                    <InputText
-                      type="email"
-                      defaultValue={loginObj.emailId}
-                      updateType="emailId"
-                      containerStyle="mt-4"
-                      labelTitle="Enter your Email Id"
-                      placeholder="Ex - johndoe@gmail.com"
-                      updateFormValue={updateFormValue}
-                    />
-                  </>
-                )}
-
-                {isOtpSent && (
-                  <>
-                    <p className="text-center text-lg   md:mt-0 mt-6   font-semibold">
-                      Enter verification code received on {loginObj.emailId}
+                    <p className="text-center text-sm font-normal">
+                      Don't have an account?
+                      <a className="underline pl-1" href="/signup">
+                        Sign up
+                      </a>
                     </p>
-                    <p className="text-center text-slate-500 mt-2 text-sm">
-                      Didn&apos;t receive mail? Check spam folder
-                    </p>
+                  </div>
 
-                    <InputText
-                      type="number"
-                      defaultValue={loginObj.otp}
-                      updateType="otp"
-                      containerStyle="mt-4"
-                      labelTitle="Verification Code"
-                      placeholder="Ex- 1234"
-                      updateFormValue={updateFormValue}
-                    />
-                  </>
-                )}
+                  <InputText
+                    type="email"
+                    defaultValue={loginObj.emailId}
+                    updateType="emailId"
+                    containerStyle="mt-2"
+                    labelTitle="Email Id"
+                    placeholder="email@email.com"
+                    updateFormValue={updateFormValue}
+                  />
+                  <InputText
+                    type="password"
+                    defaultValue={loginObj.password}
+                    updateType="password"
+                    containerStyle="mt-2"
+                    labelTitle="Password"
+                    placeholder="Password"
+                    updateFormValue={updateFormValue}
+                  />
+                </>
               </div>
 
               <div className="mt-8">
@@ -128,7 +120,7 @@ function Login(): JSX.Element {
                 )}
                 <button type="submit" className={`btn mt-2 w-full btn-primary`}>
                   {loading && <span className="loading loading-spinner"></span>}
-                  {isOtpSent ? 'Verify' : 'Get Verification Code'}
+                  {'Sign in'}
                 </button>
               </div>
             </form>

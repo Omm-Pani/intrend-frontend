@@ -12,7 +12,6 @@ import { UserProfile } from '@/helper/types';
 import BookmarkSquareIcon from '@heroicons/react/24/outline/BookmarkSquareIcon';
 import ChevronUpIcon from '@heroicons/react/24/outline/ChevronUpIcon';
 import ArrowUpOnSquareIcon from '@heroicons/react/24/outline/ArrowUpOnSquareIcon';
-import { getUserInfo } from '@/features/common/userSlice';
 import auth from '@/lib/auth';
 
 interface LeftSidebarProps {}
@@ -26,6 +25,7 @@ function LeftSidebar(props: LeftSidebarProps) {
     if (leftSidebarDrawer) leftSidebarDrawer.click();
   };
   const user = useAppSelector((state) => state.user);
+  console.log(user);
 
   useEffect(() => {
     console.log(pathname);
@@ -54,10 +54,6 @@ function LeftSidebar(props: LeftSidebarProps) {
       }
     }
   }, [pathname]);
-
-  useEffect(() => {
-    dispatch(getUserInfo());
-  }, []);
 
   const logoutUser = async () => {
     console.log('here');
@@ -121,7 +117,7 @@ function LeftSidebar(props: LeftSidebarProps) {
               <img src={user.avatar} />
             </div>
           </div>
-          {user.name}
+          {user.username}
           <ChevronUpIcon className="w-4 " />
         </div>
         <ul
