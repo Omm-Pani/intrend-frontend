@@ -86,7 +86,7 @@ function Login(): JSX.Element {
                       Login to your Account
                     </p>
                     <p className="text-center text-sm font-normal">
-                      Don't have an account?
+                      Don&apos;t have an account?
                       <a className="underline pl-1" href="/signup">
                         Sign up
                       </a>
