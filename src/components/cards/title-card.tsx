@@ -6,6 +6,7 @@ interface TitleCardProps {
   children: ReactNode;
   topMargin?: string;
   TopSideButtons?: ReactNode;
+  imgSrc?: string;
 }
 
 function TitleCard({
@@ -13,6 +14,7 @@ function TitleCard({
   children,
   topMargin,
   TopSideButtons,
+  imgSrc,
 }: TitleCardProps) {
   return (
     <div
@@ -22,6 +24,15 @@ function TitleCard({
     >
       {/* Title for Card */}
       <Subtitle styleClass={TopSideButtons ? 'inline-block' : ''}>
+        {imgSrc && (
+          <div className="inline-block pr-2">
+            <img
+              className="inline-block w-12 h-12"
+              src="https://cdn-icons-png.flaticon.com/512/174/174883.png"
+              alt=""
+            />
+          </div>
+        )}
         {title}
 
         {/* Top side button, show only if present */}

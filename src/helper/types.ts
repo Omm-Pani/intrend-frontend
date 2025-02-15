@@ -36,7 +36,7 @@ export interface APIResponse {
  */
 export interface UserProfile {
   username: string;
-  avatar: string;
+  token: string;
   email: string;
 }
 

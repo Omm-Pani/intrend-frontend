@@ -1,7 +1,9 @@
-import React from 'react';
+'use client';
+import React, { useEffect, useState } from 'react';
 import DashboardStats from './DashboardStats';
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon';
-import { showNotification } from '../common/headerSlice';
+import axios from 'axios';
+// import { showNotification } from '../common/headerSlice';
 
 interface StatData {
   title: string;
@@ -10,29 +12,31 @@ interface StatData {
   description: string;
 }
 
-const statsData: StatData[] = [
-  {
-    title: 'Youtube',
-    value: '100k',
-    icon: <UserGroupIcon className="w-8 h-8" />,
-    description: '↗︎ 2300 (22%)',
-  },
-  {
-    title: 'Facebook',
-    value: '100k',
-    icon: <UserGroupIcon className="w-8 h-8" />,
-    description: '↗︎ 2300 (22%)',
-  },
-];
-
 const Dashboard: React.FC = () => {
-  // const dispatch = useDispatch();
-
-  // const updateDashboardPeriod = (newRange: any) => {
-  //     // Dashboard range changed, write code to refresh your values
-  //     dispatch(showNotification({ message: `Period updated to ${newRange.startDate} to ${newRange.endDate}`, status: 1 }));
-  // }
-
+  const [ytSubs, setYtSubs] = useState('');
+  // useEffect(() => {
+  //   axios
+  //     .get(`${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/list-channels`, {
+  //       withCredentials: true,
+  //     })
+  //     .then((response) => {
+  //       setYtSubs(response.data[0].subscriber_count);
+  //     });
+  // }, []);
+  const statsData: StatData[] = [
+    {
+      title: 'Youtube',
+      value: ytSubs,
+      icon: <UserGroupIcon className="w-8 h-8" />,
+      description: '↗︎ subscribers',
+    },
+    {
+      title: 'Facebook',
+      value: '100k',
+      icon: <UserGroupIcon className="w-8 h-8" />,
+      description: '↗︎ 2300 (22%)',
+    },
+  ];
   return (
     <>
       {/** ---------------------- Different stats content 1 ------------------------- */}

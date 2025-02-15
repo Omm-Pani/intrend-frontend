@@ -1,9 +1,12 @@
 import InputText from '@/components/input/input-text';
 import TextArea from '@/components/input/text-area';
+import { addPostEvent } from '@/features/common/postSlice';
+import { useAppDispatch } from '@/lib/hooks';
 import axios from 'axios';
 import React, { useState } from 'react';
 
 export default function EmailCreator() {
+  const dispatch = useAppDispatch();
   const INITIAL_EMAIL_OBJ = {
     from: '',
     subject: '',
@@ -16,22 +19,38 @@ export default function EmailCreator() {
     setEmailObj({ ...emailObj, [updateType]: value });
   };
 
-  const handleSubmit = () => {
-    const response = axios.post(
-      `${process.env.NEXT_PUBLIC_SERVER_URL}/send-email`,
-      {
-        from: emailObj.from,
-        to: to,
-        subject: emailObj.subject.toString(),
-        textContent: emailObj.textContent,
-        html: html.toString(),
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
+  const handleSubmit = async () => {
+    const d = new Date();
+    let h = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
+    let m = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
+
+    const time = h + ':' + m;
+    const response = await axios
+      .post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/send-email`,
+        {
+          from: emailObj.from,
+          to: to,
+          subject: emailObj.subject.toString(),
+          textContent: emailObj.textContent,
+          html: html.toString(),
         },
-      }
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+      .catch((err) => console.log(err));
+
+    if (response?.status === 200) {
+      dispatch(
+        addPostEvent({
+          platform: 'email',
+          time: time,
+        })
+      );
+    }
   };
 
   return (

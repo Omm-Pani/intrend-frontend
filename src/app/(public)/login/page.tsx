@@ -51,7 +51,7 @@ function Login(): JSX.Element {
         const { message, ...rest } = response.data;
         console.log('userData', rest);
         dispatch(loginUser(rest));
-        userLogin({ token: rest.token });
+        userLogin({ user: rest });
         setLoading(false);
         setErrorMessage('');
       } else {
@@ -61,8 +61,12 @@ function Login(): JSX.Element {
     }
   };
 
-  const userLogin = async ({ token }: { token: string }) => {
-    await login(token);
+  const userLogin = async ({
+    user,
+  }: {
+    user: { email: string; token: string; username: string };
+  }) => {
+    await login(user);
   };
 
   const updateFormValue = (updateType: string, value: string): void => {

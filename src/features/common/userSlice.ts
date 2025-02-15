@@ -3,7 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 const initialState: UserProfile = {
   username: '',
-  avatar: '',
+  token: '',
   email: '',
 };
 
@@ -16,7 +16,7 @@ export const userSlice = createSlice({
     },
     logoutUser: (state) => {
       state.username = '';
-      state.avatar = '';
+      state.token = '';
       state.email = '';
     },
   },

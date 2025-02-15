@@ -1,4 +1,5 @@
 import { openModal } from '@/features/common/modalSlice';
+import { addPostEvent } from '@/features/common/postSlice';
 import { MODAL_BODY_TYPES } from '@/helper/app-constants';
 import { useAppDispatch } from '@/lib/hooks';
 import React from 'react';

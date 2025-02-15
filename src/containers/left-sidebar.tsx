@@ -8,8 +8,6 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { setPageTitle } from '@/features/common/headerSlice';
-import { UserProfile } from '@/helper/types';
-import BookmarkSquareIcon from '@heroicons/react/24/outline/BookmarkSquareIcon';
 import ChevronUpIcon from '@heroicons/react/24/outline/ChevronUpIcon';
 import ArrowUpOnSquareIcon from '@heroicons/react/24/outline/ArrowUpOnSquareIcon';
 import auth from '@/lib/auth';
@@ -25,10 +23,8 @@ function LeftSidebar(props: LeftSidebarProps) {
     if (leftSidebarDrawer) leftSidebarDrawer.click();
   };
   const user = useAppSelector((state) => state.user);
-  console.log(user);
 
   useEffect(() => {
-    console.log(pathname);
     let routeObj = routes.filter((r) => {
       return r.path == pathname;
     })[0];
@@ -113,9 +109,7 @@ function LeftSidebar(props: LeftSidebarProps) {
           className="btn w-full bg-base-100 text-left justify-start "
         >
           <div className="avatar">
-            <div className="w-6 rounded-full">
-              <img src={user.avatar} />
-            </div>
+            <div className="w-6 rounded-full border-2 border-primary"></div>
           </div>
           {user.username}
           <ChevronUpIcon className="w-4 " />

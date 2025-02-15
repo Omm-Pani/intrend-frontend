@@ -1,7 +1,6 @@
 // lib/auth.ts
 'use client';
 
-import axios from 'axios';
 import Cookies from 'js-cookie';
 
 const auth = {
@@ -11,6 +10,22 @@ const auth = {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
     });
+  },
+
+  saveUserData: (user: any) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    Cookies.set('auth-token', user.token, {
+      expires: 1, // 1 day
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+  },
+
+  getUserData: () => {
+    const storedUser = localStorage.getItem('user');
+    const user = JSON.parse(storedUser || '{}');
+    const token = Cookies.get('auth-token');
+    return { user, token };
   },
 
   getToken: (): string | undefined => {

@@ -1,53 +1,85 @@
 import DropDownInputBox from '@/components/input/dropDownInput';
 import InputText from '@/components/input/input-text';
 import TextArea from '@/components/input/text-area';
+import { addPostEvent } from '@/features/common/postSlice';
+import { convertToYouTubeTimeFormat, getCurrentTime } from '@/helper/functions';
+import { timezones } from '@/helper/timezones';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import Small_exit_icon from '@/svg/small_exit_icon';
+import CheckIcon from '@heroicons/react/24/outline/CheckIcon';
 import axios from 'axios';
+import { time } from 'console';
 import { title } from 'process';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
+import { scheduler } from 'timers/promises';
+import Cookies from 'js-cookie';
+import { ytChannel } from '@/app/(protected)/integrations/page';
 
 export default function YtPostCreator() {
+  const dispatch = useAppDispatch();
+  const dDate = useAppSelector((state) => state.date.date);
   const INITIAL_YT_POST_OBJ = {
     post_title: '',
     post_description: '',
     post_tags: '',
     post_category_id: '',
-    created_at: Date.now(),
+    post_scheduled_timezone: '',
+    post_scheduled_date: dDate,
+    post_scheduled_time: '',
   };
   const [ytPostObj, setYtPostObj] = useState(INITIAL_YT_POST_OBJ);
-  // const [channels, setChannels] = useState([]);
-  // const [selectedChannel, setSelectedChannel] = useState<string[]>([]);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [channels, setChannels] = useState<ytChannel[]>([]);
+  const [selectedChannelId, setSelectedChannelId] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [isChannelLoggedIn, setIsChannelLoggedIn] = useState(false);
   const updateFormValue = (updateType: string, value: string) => {
     setYtPostObj({ ...ytPostObj, [updateType]: value });
   };
   const imageInputRef = useRef<HTMLInputElement>(null);
-
-  // useEffect(() => {
-  //   axios
-  //     .get('http://localhost:5000/youtube/list-channels', {
-  //       withCredentials: true,
-  //     })
-  //     .then((res) => {
-  //       setChannels(res.data.map((channel: any) => channel.channel_title));
-  //     });
-  // }, []);
+  console.log(selectedChannelId);
 
   const handlePost = async () => {
+    const time = getCurrentTime();
+    const postPublishAt = convertToYouTubeTimeFormat(
+      ytPostObj.post_scheduled_date,
+      ytPostObj.post_scheduled_time,
+      ytPostObj.post_scheduled_timezone
+    );
+
     const response = await axios
-      .post(`${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/upload/video`, {
-        title: ytPostObj.post_title,
-        description: ytPostObj.post_description,
-        tags: ytPostObj.post_tags,
-        categoryId: ytPostObj.post_category_id,
-        s3VideoUrl: videoUrl,
-        s3ThumbnailUrl: thumbnailUrl,
-        privacyStatus: 'public',
-      })
+      .post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/upload/video`,
+        {
+          title: ytPostObj.post_title,
+          description: ytPostObj.post_description,
+          tags: ytPostObj.post_tags,
+          categoryId: ytPostObj.post_category_id,
+          s3VideoUrl: videoUrl,
+          s3ThumbnailUrl: thumbnailUrl,
+          privacyStatus: 'public',
+          publishAt: postPublishAt,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('auth-token')}`,
+          },
+        }
+      )
       .catch((err) => console.log(err));
-    console.log(response);
+
+    if (response?.status === 200) {
+      dispatch(
+        addPostEvent({
+          platform: 'youtube',
+          time: ytPostObj.post_scheduled_time
+            ? ytPostObj.post_scheduled_time
+            : time,
+        })
+      );
+    }
   };
 
   const handleFileInputChange = async (
@@ -182,14 +214,7 @@ export default function YtPostCreator() {
 
   return (
     <div className="grid grid-cols-2 h-screen">
-      <div className="overflow-y-auto overscroll-contain px-8 pb-24">
-        {/* <DropDownInputBox
-          placeholder="Select Pages"
-          label="Pages"
-          value={selectedChannel}
-          list={channels}
-          onChange={dropdownOnChange}
-        /> */}
+      <div className="overflow-y-auto overscroll-contain px-8 pb-24 flex flex-col min-h-screen">
         <InputText
           type="text"
           defaultValue={ytPostObj.post_title}
@@ -279,7 +304,65 @@ export default function YtPostCreator() {
           />
           {isLoading && 'Uploading...'}
         </div>
-        <div className="modal-action">
+
+        <div className="form-control">
+          <div className="form-control w-52 pt-2">
+            <label className="label cursor-pointer">
+              <span className="text-white text-md">Schedule Upload</span>
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                onChange={(e) => setIsScheduled(e.target.checked)}
+              />
+            </label>
+          </div>
+          <div
+            className={`transition-all duration-300 ${
+              isScheduled
+                ? 'h-auto opacity-100'
+                : 'h-0 opacity-0 overflow-hidden'
+            }`}
+          >
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={dDate}
+                placeholder="Enter Date(YYYY-MM-DD)"
+                className="input input-bordered w-1/4 max-w-xs"
+                onChange={(e) => {
+                  updateFormValue('post_scheduled_date', e.target.value);
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Enter Time(HH:mm)"
+                className="input input-bordered w-1/4 max-w-xs"
+                onChange={(e) => {
+                  updateFormValue('post_scheduled_time', e.target.value);
+                }}
+              />
+              <select
+                className="select select-bordered w-1/4 max-w-xs"
+                onChange={(e) => {
+                  updateFormValue('post_scheduled_timezone', e.target.value);
+                }}
+                defaultValue={'Select Timezone'}
+              >
+                <option disabled value="Select Timezone">
+                  Select Timezone
+                </option>
+
+                {timezones.map((timezone) => (
+                  <option key={timezone.id} value={timezone.tz}>
+                    {timezone.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-action mt-auto">
           <button className="btn btn-primary px-6" onClick={handlePost}>
             Post
           </button>

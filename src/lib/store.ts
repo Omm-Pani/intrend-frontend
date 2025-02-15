@@ -1,5 +1,7 @@
+import dateSlice from '@/features/common/dateSlice';
 import headerSlice from '@/features/common/headerSlice';
 import modalSlice from '@/features/common/modalSlice';
+import postSlice from '@/features/common/postSlice';
 import userSlice from '@/features/common/userSlice';
 
 import { configureStore } from '@reduxjs/toolkit';
@@ -10,6 +12,8 @@ export const makeStore = () => {
       header: headerSlice,
       modal: modalSlice,
       user: userSlice,
+      post: postSlice,
+      date: dateSlice,
     },
   });
 };

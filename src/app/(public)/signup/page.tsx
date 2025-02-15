@@ -5,7 +5,7 @@ import InputText from '@/components/input/input-text';
 import ErrorText from '@/components/typography/error-text';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/AuthProvider';
+import { User, useAuth } from '@/lib/AuthProvider';
 import axios from 'axios';
 import { useAppDispatch } from '@/lib/hooks';
 import { loginUser } from '@/features/common/userSlice';
@@ -91,22 +91,20 @@ function Login(): JSX.Element {
           }
         );
         const { message, ...rest } = response.data;
-        console.log(rest);
         console.log('userData', rest);
         dispatch(loginUser(rest));
-        userLogin(rest.token);
+        userLogin(rest);
         setLoading(false);
         setLoginObj({ otp: '', emailId: '', username: '', password: '' });
       } catch (error: any) {
-        setIsOtpSent(false);
         setLoading(false);
         setErrorMessage(error.response.data.message);
       }
     }
   };
 
-  const userLogin = async ({ token }: { token: string }) => {
-    await login(token);
+  const userLogin = async (user: User) => {
+    await login(user);
   };
 
   const updateFormValue = (updateType: string, value: string): void => {

@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/AuthProvider';
 import Header from '@/containers/header';
 import LeftSidebar from '@/containers/left-sidebar';
 import ModalLayout from '@/containers/modal-layout';
+import { loginUser } from '@/features/common/userSlice';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,6 +28,10 @@ export default function ProtectedLayout({ children, params }: LayoutProps) {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login');
+    }
+    const { user, token } = auth.getUserData();
+    if (user && token) {
+      dispatch(loginUser(user));
     }
   }, [isAuthenticated, isLoading, router]);
 

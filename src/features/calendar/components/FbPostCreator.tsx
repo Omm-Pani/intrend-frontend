@@ -8,8 +8,11 @@ import Photo from '../../../svg/photo';
 import Emoji from '../../../svg/emoji';
 import Small_exit_icon from '../../../svg/small_exit_icon';
 import axios from 'axios';
+import { useAppDispatch } from '@/lib/hooks';
+import { addPostEvent } from '@/features/common/postSlice';
 
 export default function FbPostCreator() {
+  const dispatch = useAppDispatch();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [pageList, setPageList] = useState([]);
   const [pagesSelected, setPagesSelected] = useState<string[]>([]);
@@ -39,13 +42,27 @@ export default function FbPostCreator() {
   }, []);
 
   const handlePost = async () => {
-    await axios
+    const d = new Date();
+    let h = d.getHours() < 10 ? '0' + d.getHours() : d.getHours();
+    let m = d.getMinutes() < 10 ? '0' + d.getMinutes() : d.getMinutes();
+
+    const time = h + ':' + m;
+    const response = await axios
       .post(`${process.env.NEXT_PUBLIC_SERVER_URL}/create-post`, {
         page_names: pagesSelected,
         message: content,
         img_urls: imageUrls,
       })
       .catch((err) => console.log(err));
+
+    if (response?.status === 200) {
+      dispatch(
+        addPostEvent({
+          platform: 'facebook',
+          time: time,
+        })
+      );
+    }
   };
 
   const handleFileInputChange = async (
