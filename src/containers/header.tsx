@@ -43,12 +43,12 @@ function Header({ contentRef }: HeaderProps): JSX.Element {
   }, []);
 
   return (
-    <div className="navbar sticky top-0 bg-base-100 z-10 shadow-md">
+    <div className="navbar sticky top-0 z-10">
       {/* Menu toggle for mobile view or small screen */}
       <div className="flex-1">
         <label
           htmlFor="left-sidebar-drawer"
-          className="btn btn-primary drawer-button lg:hidden"
+          className="btn btn-sm btn-info drawer-button lg:hidden"
         >
           <Bars3Icon className="h-5 inline-block w-5" />
         </label>

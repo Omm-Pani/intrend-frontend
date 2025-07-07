@@ -6,12 +6,6 @@ const iconClasses = `h-6 w-6`;
 
 const routes: SidebarMenuObj[] = [
   {
-    path: '/dashboard',
-    icon: <Squares2X2Icon className={iconClasses} />,
-    pageName: 'Dashboard',
-    pageTitle: 'Dashboard',
-  },
-  {
     path: '/posts-center',
     icon: <CloudArrowUpIcon className={iconClasses} />,
     pageName: 'Post Center',

@@ -21,11 +21,12 @@ const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL;
 
 const INITIAL_INTEGRATION_LIST = [
   {
+    name: 'Youtube',
+    icon: 'https://cdn-icons-png.flaticon.com/512/174/174883.png',
+  },
+  {
     name: 'Facebook',
     icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png',
-    isActive: false,
-    description:
-      'Meta Platforms, Inc., doing business as Meta and formerly named Facebook, Inc., and TheFacebook.',
   },
   // {
   //   name: 'Gmail',
@@ -34,13 +35,6 @@ const INITIAL_INTEGRATION_LIST = [
   //   description:
   //     'Gmail is a free email service provided by Google. As of 2019, it had 1.5 billion active users.',
   // },
-  {
-    name: 'Youtube',
-    icon: 'https://cdn-icons-png.flaticon.com/512/174/174883.png',
-    isActive: false,
-    description:
-      'YouTube is an American online video sharing platform owned by Google. Founded in 2005',
-  },
 ];
 
 function Page() {
@@ -122,8 +116,10 @@ function Page() {
     }
   };
 
-  const handleToggle = (bool: boolean, channelId: string) => {
-    handleReconnect(channelId);
+  const handleToggle = async (isChecked: boolean, channelId: string) => {
+    if (isChecked && channelId !== connectedChannelId) {
+      await handleReconnect(channelId);
+    }
   };
 
   const handleReconnect = async (channelId: string) => {
@@ -163,17 +159,19 @@ function Page() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {integrationList.map((i, k) => {
             return (
-              <button key={k} onClick={handleIntegration(i.name)}>
-                <TitleCard title={i.name} topMargin={'mt-2'}>
-                  <p className="flex">
-                    <img
-                      alt="icon"
-                      src={i.icon}
-                      className="w-12 h-12 inline-block mr-4"
-                    />
-                    {i.description}
-                  </p>
-                </TitleCard>
+              <button
+                key={k}
+                onClick={handleIntegration(i.name)}
+                className="btn relative bg-base-100 btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl"
+              >
+                <img
+                  alt="icon"
+                  src={i.icon}
+                  className="absolute left-4 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12"
+                />
+                <span className="text-center text-md text-secondary">
+                  Connect to {i.name}
+                </span>
               </button>
             );
           })}
@@ -186,7 +184,7 @@ function Page() {
           {channelList.length > 0 ? (
             channelList.map((channel: ytChannel, index) => (
               <li key={index}>
-                <div className="form-control bg-neutral-900 rounded-2xl p-2 mb-2">
+                <div className="form-control bg-primary rounded-2xl p-2 mb-2">
                   <label className="flex cursor-pointer justify-between items-center pl-4 pr-4">
                     <div className="flex items-center">
                       <img
@@ -194,7 +192,7 @@ function Page() {
                         alt=""
                         className="w-12 h-12 inline-block mr-2"
                       />
-                      <span className="text-lg font-medium">
+                      <span className="text-lg font-semibold text-white">
                         {channel.channel_title}
                       </span>
                     </div>

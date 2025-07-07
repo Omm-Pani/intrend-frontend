@@ -127,9 +127,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     <div className="w-full bg-base-100 p-4 rounded-lg">
       <div className="flex items-center justify-between">
         <div className="flex justify-normal gap-2 sm:gap-4">
-          <p className="font-semibold text-xl w-48">
-            {moment(firstDayOfMonth).format('MMMM yyyy')}
-            <span className="text-xs ml-2">Beta</span>
+          <p className="pl-5 pt-1 font-semibold text-xl w-48">
+            {moment(firstDayOfMonth).format('MMMM yyyy').toUpperCase()}
           </p>
           <button
             className="btn btn-square btn-sm btn-ghost"
@@ -155,7 +154,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
             className="btn btn-sm btn-ghost btn-outline normal-case"
             onClick={() => addNewEvent(new Date())}
           >
-            Add New Event
+            Add New Post
           </button>
         </div>
       </div>

@@ -19,10 +19,10 @@ export default function PublicLayout({
   // If user is authenticated and still opening login pages, redirect to welcome page
   useEffect(() => {
     if (!isLoading && isAuthenticated && pathname === '/login') {
-      router.replace(`/dashboard`);
+      router.replace(`/posts-center`);
     }
     if (!isLoading && isAuthenticated && pathname === '/signup') {
-      router.replace(`/dashboard`);
+      router.replace(`/posts-center`);
     }
     console.log('public layout...', isAuthenticated, isLoading);
   }, [isAuthenticated, isLoading, router, pathname]);

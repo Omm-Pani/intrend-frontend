@@ -51,12 +51,13 @@ export default function ProtectedLayout({ children, params }: LayoutProps) {
           type="checkbox"
           className="drawer-toggle"
         />
-        <div className="drawer-content flex flex-col ">
-          <Header contentRef={mainContentRef} />
+        <div className="mt-8 mr-4 drawer-content flex flex-col ">
           <main
-            className="flex-1 overflow-y-auto md:pt-4 pt-4 px-6  bg-base-200"
+            className="flex-1 overflow-y-auto md:pt-1 pt-1 px-6  bg-base-200 rounded-t-xl"
             ref={mainContentRef}
           >
+            <Header contentRef={mainContentRef} />
+
             {children}
             <div className="h-16"></div>
           </main>
