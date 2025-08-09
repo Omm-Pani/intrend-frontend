@@ -38,17 +38,11 @@ export default function PostTypeConfirmation() {
     <div className="flex flex-col gap-2">
       <button
         className="btn btn-md normal-case btn-primary"
-        onClick={openFbPostModal}
-      >
-        facebook
-      </button>
-      <button
-        className="btn btn-md normal-case btn-primary"
         onClick={openYtPostModal}
       >
         youtube
       </button>
-      <button className="btn btn-md normal-case btn-primary">instagram</button>
+
       <button
         className="btn btn-md normal-case btn-primary"
         onClick={openEmailModal}

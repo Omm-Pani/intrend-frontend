@@ -6,8 +6,6 @@ import Cookies from 'js-cookie';
 import axios from 'axios';
 import Subtitle from '@/components/typography/subtitle';
 
-// import { showNotification } from '../common/headerSlice';
-
 export interface ytChannel {
   channel_id: string;
   channel_title: string;
@@ -17,6 +15,7 @@ export interface ytChannel {
   tokens: any;
   userId: string;
 }
+
 const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL;
 
 const INITIAL_INTEGRATION_LIST = [
@@ -24,167 +23,143 @@ const INITIAL_INTEGRATION_LIST = [
     name: 'Youtube',
     icon: 'https://cdn-icons-png.flaticon.com/512/174/174883.png',
   },
-  {
-    name: 'Facebook',
-    icon: 'https://cdn-icons-png.flaticon.com/512/124/124010.png',
-  },
-  // {
-  //   name: 'Gmail',
-  //   icon: 'https://cdn-icons-png.flaticon.com/512/5968/5968534.png',
-  //   isActive: false,
-  //   description:
-  //     'Gmail is a free email service provided by Google. As of 2019, it had 1.5 billion active users.',
-  // },
 ];
 
 function Page() {
   const dispatch = useDispatch();
+  const [refreshFlag, setRefreshFlag] = useState<boolean>(false);
+
   const [channelList, setChannelList] = useState<ytChannel[]>([]);
   const [connectedChannelId, setConnectedChannelId] = useState('');
-  const [isChecked, setIsChecked] = useState(true);
-
   const [integrationList, setIntegrationList] = useState(
     INITIAL_INTEGRATION_LIST
   );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchChannels = async () => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError('');
       try {
-        const response = await axios.get(`${serverUrl}/youtube/list-channels`, {
-          headers: {
-            Authorization: `Bearer ${Cookies.get('auth-token')}`,
-          },
-        });
-        setChannelList(response.data.map((channel: ytChannel) => channel));
-      } catch (error) {
-        console.error('Error fetching channels:', error);
+        const [channelsRes, connectedRes] = await Promise.all([
+          axios.get(`${serverUrl}/youtube/list-channels`, {
+            headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
+          }),
+          axios.get(`${serverUrl}/youtube/check-connected-channel`, {
+            headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
+          }),
+        ]);
+        setChannelList(channelsRes.data || []);
+        setConnectedChannelId(connectedRes.data.channel_id || '');
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'No channels connected.');
+      } finally {
+        setLoading(false);
       }
     };
 
-    const checkConnectedYtChannel = async () => {
-      try {
-        const response = await axios.get(
-          `${serverUrl}/youtube/check-connected-channel`,
-          {
-            headers: {
-              Authorization: `Bearer ${Cookies.get('auth-token')}`,
-            },
-          }
-        );
-
-        setConnectedChannelId(response.data.channel_id);
-      } catch (error) {
-        console.error('Error fetching channels:', error);
-      }
-    };
-    fetchChannels();
-    checkConnectedYtChannel();
-  }, []);
+    fetchData();
+  }, [refreshFlag]);
 
   const handleIntegration = (integration: string) => async () => {
-    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL;
-
-    switch (integration) {
-      case 'Facebook':
-        try {
-          const response = await axios.get(`${serverUrl}/auth/facebook`, {
-            headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
-          });
-          window.location.href = response.data.url;
-        } catch (error: any) {
-          console.error(`Error connecting to facebook`, error);
-        }
-        break;
-
-      case 'Gmail':
-        console.log('Gmail');
-        break;
-
-      case 'Youtube':
-        try {
-          const response = await axios.get(`${serverUrl}/youtube/auth`, {
-            headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
-          });
-          window.location.href = response.data.url;
-        } catch (error: any) {
-          console.error(`Error connecting to youtube`, error);
-        }
-        break;
-
-      default:
-        break;
-    }
-  };
-
-  const handleToggle = async (isChecked: boolean, channelId: string) => {
-    if (isChecked && channelId !== connectedChannelId) {
-      await handleReconnect(channelId);
+    setLoading(true);
+    setError('');
+    try {
+      if (integration === 'Youtube') {
+        const response = await axios.get(`${serverUrl}/youtube/auth`, {
+          headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
+        });
+        window.location.href = response.data.url;
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || `Error connecting to ${integration}`
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleReconnect = async (channelId: string) => {
-    const response = await axios.post(
-      `${serverUrl}/youtube/reconnect-channel`,
-      {
-        channelId: channelId,
-      },
-      {
-        headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
-      }
-    );
-    if (response.status === 200) {
-      setConnectedChannelId(channelId);
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.post(
+        `${serverUrl}/youtube/reconnect-channel`,
+        { channelId },
+        { headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` } }
+      );
+      if (response.status === 200) setConnectedChannelId(channelId);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to reconnect channel.');
+    } finally {
+      setLoading(false);
     }
   };
+
   const handleDisconnect = async (channelId: string) => {
-    const response = await axios.post(
-      `${serverUrl}/youtube/disconnect-channel`,
-      { channelId: channelId },
-      {
-        headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` },
-      }
-    );
-    if (response.status === 200) {
-      setChannelList(
-        channelList.filter(
-          (channel: ytChannel) => channel.channel_id !== channelId
-        )
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.post(
+        `${serverUrl}/youtube/disconnect-channel`,
+        { channelId },
+        { headers: { Authorization: `Bearer ${Cookies.get('auth-token')}` } }
       );
+      if (response.status === 200) {
+        setChannelList(channelList.filter((c) => c.channel_id !== channelId));
+        setRefreshFlag((prev) => !prev);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to disconnect channel.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
       <div className="mt-6 ml-auto mr-auto max-w-7xl">
+        {loading && (
+          <div className="flex justify-center mb-4">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        )}
+        {error && (
+          <div role="alert" className="text-red-600 mb-2 flex justify-center">
+            <span>{error}</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {integrationList.map((i, k) => {
-            return (
-              <button
-                key={k}
-                onClick={handleIntegration(i.name)}
-                className="btn relative bg-base-100 btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl"
-              >
-                <img
-                  alt="icon"
-                  src={i.icon}
-                  className="absolute left-4 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12"
-                />
-                <span className="text-center text-md text-secondary">
-                  Connect to {i.name}
-                </span>
-              </button>
-            );
-          })}
+          {integrationList.map((i, k) => (
+            <button
+              key={k}
+              onClick={handleIntegration(i.name)}
+              disabled={loading}
+              className="btn relative bg-[#F0F5F9] btn-xs sm:btn-sm md:btn-md lg:btn-lg xl:btn-xl"
+            >
+              <img
+                alt="icon"
+                src={i.icon}
+                className="absolute left-4 w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12"
+              />
+              <span className="text-center text-md text-[#1E2022]">
+                Connect to {i.name}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
-      <div className="mt-6 ml-auto mr-auto max-w-6xl items-center card w-full p-6 bg-base-100 shadow-xl">
+
+      <div className="mt-6 ml-auto mr-auto max-w-6xl items-center card w-full p-6 bg-[#F0F5F9] shadow-xl">
         <Subtitle>Accounts Connected</Subtitle>
         <div className="divider mt-2"></div>
         <ul className="w-2/3">
           {channelList.length > 0 ? (
-            channelList.map((channel: ytChannel, index) => (
+            channelList.map((channel, index) => (
               <li key={index}>
-                <div className="form-control bg-primary rounded-2xl p-2 mb-2">
+                <div className="form-control bg-[#52616B] rounded-2xl p-2 mb-2">
                   <label className="flex cursor-pointer justify-between items-center pl-4 pr-4">
                     <div className="flex items-center">
                       <img
@@ -202,12 +177,18 @@ function Page() {
                         className="toggle toggle-error"
                         checked={channel.channel_id === connectedChannelId}
                         onChange={(val) => {
-                          handleToggle(val.target.checked, channel.channel_id);
+                          if (
+                            val.target.checked &&
+                            channel.channel_id !== connectedChannelId
+                          ) {
+                            handleReconnect(channel.channel_id);
+                          }
                         }}
                       />
                       <button
-                        className="btn btn-sm  btn-warning"
+                        className="btn btn-sm btn-warning"
                         onClick={() => handleDisconnect(channel.channel_id)}
+                        disabled={loading}
                       >
                         Revoke
                       </button>
@@ -244,24 +225,3 @@ function Page() {
 }
 
 export default Page;
-
-//   const updateIntegrationStatus = (index: number) => {
-//     let integration = integrationList[index];
-//     setIntegrationList(
-//       integrationList.map((i, k) => {
-//         if (k === index) {
-//           return { ...i, isActive: !i.isActive };
-//         }
-
-//         return i;
-//       })
-//     );
-//   dispatch(
-//     showNotification({
-//       message: `${integration.name} ${
-//         integration.isActive ? 'disabled' : 'enabled'
-//       }`,
-//       status: 1,
-//     })
-//   );
-//   };

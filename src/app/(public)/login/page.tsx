@@ -1,7 +1,7 @@
 'use client';
 
 import LandingIntro from '@/features/login/landing-intro';
-import InputText from '@/components/input/input-text';
+import ThemedInput from '@/components/input/ThemedInput';
 import ErrorText from '@/components/typography/error-text';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,10 +18,8 @@ interface LoginObj {
 function Login(): JSX.Element {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [showLoginPage, setShowLoginPage] = useState<boolean>(true);
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
 
   const [loginObj, setLoginObj] = useState<LoginObj>({
@@ -32,101 +30,99 @@ function Login(): JSX.Element {
   const submitForm = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage('');
-    if (loginObj.emailId.trim() === '') {
-      setErrorMessage('Email Id is required!');
-      return;
-    } else if (loginObj.password.trim() === '') {
-      setErrorMessage('Password is required!');
-      return;
-    } else {
+
+    if (!loginObj.emailId.trim())
+      return setErrorMessage('Email Id is required!');
+    if (!loginObj.password.trim())
+      return setErrorMessage('Password is required!');
+
+    try {
+      setLoading(true);
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/user/signin`,
         loginObj,
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
       if (response.status === 200) {
         const { message, ...rest } = response.data;
-        console.log('userData', rest);
         dispatch(loginUser(rest));
-        userLogin({ user: rest });
-        setLoading(false);
-        setErrorMessage('');
+        await login(rest);
       } else {
-        setLoading(false);
         setErrorMessage(response.data.message);
       }
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const userLogin = async ({
-    user,
-  }: {
-    user: { email: string; token: string; username: string };
-  }) => {
-    await login(user);
-  };
-
-  const updateFormValue = (updateType: string, value: string): void => {
+  const updateFormValue = (field: keyof LoginObj, value: string) => {
     setErrorMessage('');
-    setLoginObj({ ...loginObj, [updateType]: value });
+    setLoginObj({ ...loginObj, [field]: value });
   };
 
   return (
-    <div className="min-h-screen bg-base-200 flex items-center">
-      <div className="card mx-auto w-full max-w-5xl shadow-xl">
-        <div className="grid md:grid-cols-2 grid-cols-1 bg-base-100 rounded-xl">
-          <div>
-            <LandingIntro />
+    <div className="min-h-screen bg-[#F0F5F9] flex items-center relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-[#1B262C]/50 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center">
+            <span className="loading loading-spinner loading-lg text-[#BBE1FA]"></span>
+            <p className="text-white mt-4 font-semibold">Signing you in...</p>
           </div>
-          <div className="py-24 px-10">
-            <form onSubmit={(e) => submitForm(e)}>
-              <div className="mb-4">
-                <>
-                  <div className="md:mt-0 mt-6 mb-12">
-                    <p className="text-center text-2xl font-bold">
-                      Login to your Account
-                    </p>
-                    <p className="text-center text-sm font-normal">
-                      Don&apos;t have an account?
-                      <a className="underline pl-1" href="/signup">
-                        Sign up
-                      </a>
-                    </p>
-                  </div>
+        </div>
+      )}
 
-                  <InputText
-                    type="email"
-                    defaultValue={loginObj.emailId}
-                    updateType="emailId"
-                    containerStyle="mt-2"
-                    labelTitle="Email Id"
-                    placeholder="email@email.com"
-                    updateFormValue={updateFormValue}
-                  />
-                  <InputText
-                    type="password"
-                    defaultValue={loginObj.password}
-                    updateType="password"
-                    containerStyle="mt-2"
-                    labelTitle="Password"
-                    placeholder="Password"
-                    updateFormValue={updateFormValue}
-                  />
-                </>
+      <div className="card mx-auto w-full max-w-5xl shadow-xl rounded-2xl overflow-hidden">
+        <div className="grid md:grid-cols-2 bg-white">
+          <LandingIntro />
+          <div className="p-10 md:p-16">
+            <form onSubmit={submitForm}>
+              <div className="mb-10 text-center">
+                <h2 className="text-3xl font-bold text-gray-900">
+                  Login to your Account
+                </h2>
+                <p className="text-gray-600 mt-2">
+                  Don't have an account?
+                  <a
+                    href="/signup"
+                    className="text-primary font-semibold hover:underline ml-1"
+                  >
+                    Sign up
+                  </a>
+                </p>
               </div>
 
-              <div className="mt-8">
-                {errorMessage && (
-                  <ErrorText styleClass="mt-8">{errorMessage}</ErrorText>
+              <ThemedInput
+                label="Email Id"
+                type="email"
+                placeholder="you@example.com"
+                value={loginObj.emailId}
+                onChange={(val) => updateFormValue('emailId', val)}
+              />
+              <ThemedInput
+                label="Password"
+                type="password"
+                placeholder="••••••••"
+                value={loginObj.password}
+                onChange={(val) => updateFormValue('password', val)}
+              />
+
+              {errorMessage && <ErrorText>{errorMessage}</ErrorText>}
+
+              <button
+                type="submit"
+                className="btn btn-primary w-full mt-6 rounded-xl"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="loading loading-spinner"></span>
+                ) : (
+                  'Sign in'
                 )}
-                <button type="submit" className={`btn mt-2 w-full btn-primary`}>
-                  {loading && <span className="loading loading-spinner"></span>}
-                  {'Sign in'}
-                </button>
-              </div>
+              </button>
             </form>
           </div>
         </div>

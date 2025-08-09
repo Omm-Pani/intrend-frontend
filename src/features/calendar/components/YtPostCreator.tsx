@@ -1,23 +1,23 @@
-import DropDownInputBox from '@/components/input/dropDownInput';
+import React, { useState, useRef } from 'react';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import Cookies from 'js-cookie';
+import axios, { AxiosError } from 'axios';
 import InputText from '@/components/input/input-text';
-import TextArea from '@/components/input/text-area';
 import { addPostEvent } from '@/features/common/postSlice';
 import { convertToYouTubeTimeFormat, getCurrentTime } from '@/helper/functions';
 import { timezones } from '@/helper/timezones';
-import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import Small_exit_icon from '@/svg/small_exit_icon';
-import CheckIcon from '@heroicons/react/24/outline/CheckIcon';
-import axios from 'axios';
-import { time } from 'console';
-import { title } from 'process';
-import React, { use, useEffect, useRef, useState } from 'react';
-import { scheduler } from 'timers/promises';
-import Cookies from 'js-cookie';
-import { ytChannel } from '@/app/(protected)/integrations/page';
+
+// This type would be in a separate types file ideally
+interface ytChannel {
+  channel_id: string;
+  channel_title: string;
+}
 
 export default function YtPostCreator() {
   const dispatch = useAppDispatch();
   const dDate = useAppSelector((state) => state.date.date);
+
   const INITIAL_YT_POST_OBJ = {
     post_title: '',
     post_description: '',
@@ -27,39 +27,76 @@ export default function YtPostCreator() {
     post_scheduled_date: dDate,
     post_scheduled_time: '',
   };
+
   const [ytPostObj, setYtPostObj] = useState(INITIAL_YT_POST_OBJ);
   const [isScheduled, setIsScheduled] = useState(false);
-  const [channels, setChannels] = useState<ytChannel[]>([]);
-  const [selectedChannelId, setSelectedChannelId] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState<string>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string>('');
-  const [isChannelLoggedIn, setIsChannelLoggedIn] = useState(false);
+
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [thumbnailKey, setThumbnailKey] = useState<string | null>(null); // NEW: State for thumbnail key
+
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoKey, setVideoKey] = useState<string | null>(null); // NEW: State for video key
+
+  // NEW: Specific loading and error states for better UX
+  const [isPosting, setIsPosting] = useState(false);
+  const [isThumbnailUploading, setIsThumbnailUploading] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null); // NEW: Ref for video input for reset
+
   const updateFormValue = (updateType: string, value: string) => {
     setYtPostObj({ ...ytPostObj, [updateType]: value });
   };
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  console.log(selectedChannelId);
+
+  // NEW: Function to reset the entire form state
+  const resetForm = () => {
+    setYtPostObj(INITIAL_YT_POST_OBJ);
+    setThumbnailUrl(null);
+    setThumbnailKey(null);
+    setVideoUrl(null);
+    setVideoKey(null);
+    setIsScheduled(false);
+    setError(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
 
   const handlePost = async () => {
-    const time = getCurrentTime();
-    const postPublishAt = convertToYouTubeTimeFormat(
-      ytPostObj.post_scheduled_date,
-      ytPostObj.post_scheduled_time,
-      ytPostObj.post_scheduled_timezone
-    );
+    // Basic validation
+    if (!ytPostObj.post_title) {
+      setError('Post title is required.');
+      return;
+    }
+    if (!videoKey) {
+      setError('A video must be uploaded before posting.');
+      return;
+    }
 
-    const response = await axios
-      .post(
+    setIsPosting(true);
+    setError(null);
+
+    try {
+      const time = getCurrentTime();
+      const postPublishAt = isScheduled
+        ? convertToYouTubeTimeFormat(
+            ytPostObj.post_scheduled_date,
+            ytPostObj.post_scheduled_time,
+            ytPostObj.post_scheduled_timezone
+          )
+        : null;
+
+      const response = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/upload/video`,
         {
           title: ytPostObj.post_title,
           description: ytPostObj.post_description,
-          tags: ytPostObj.post_tags,
+          tags: ytPostObj.post_tags.split(',').map((tag) => tag.trim()), // Send tags as an array
           categoryId: ytPostObj.post_category_id,
-          s3VideoUrl: videoUrl,
-          s3ThumbnailUrl: thumbnailUrl,
-          privacyStatus: 'public',
+          s3VideoKey: videoKey, // CHANGED: Send the key, not the URL
+          s3ThumbnailKey: thumbnailKey, // CHANGED: Send the key
+          privacyStatus: 'public', // This can be handled by backend based on publishAt
           publishAt: postPublishAt,
         },
         {
@@ -67,154 +104,102 @@ export default function YtPostCreator() {
             Authorization: `Bearer ${Cookies.get('auth-token')}`,
           },
         }
-      )
-      .catch((err) => console.log(err));
-
-    if (response?.status === 200) {
-      dispatch(
-        addPostEvent({
-          platform: 'youtube',
-          time: ytPostObj.post_scheduled_time
-            ? ytPostObj.post_scheduled_time
-            : time,
-        })
       );
+
+      if (response.status === 200) {
+        dispatch(
+          addPostEvent({
+            platform: 'youtube',
+            time: ytPostObj.post_scheduled_time
+              ? ytPostObj.post_scheduled_time
+              : time,
+          })
+        );
+        alert('Post created successfully!'); // Use a more sophisticated notification system if available
+        resetForm(); // NEW: Reset form on success
+      }
+    } catch (err) {
+      console.error('Error posting video:', err);
+      const axiosError = err as AxiosError<{ message?: string }>;
+      const errorMessage =
+        axiosError.response?.data?.message ||
+        'An unexpected error occurred while posting. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setIsPosting(false);
     }
   };
 
-  const handleFileInputChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
+  // REFACTORED with better loading and error handling
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fileType: 'thumbnail' | 'video'
   ) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile) {
-      return;
-    }
+    if (!selectedFile) return;
 
-    // Add loading state
-    setIsLoading(true);
+    const setLoading =
+      fileType === 'thumbnail' ? setIsThumbnailUploading : setIsVideoUploading;
+    const urlEndpoint =
+      fileType === 'thumbnail' ? 's3ThumbnailUrl' : 's3VideoUrl';
+
+    setLoading(true);
+    setError(null);
 
     try {
-      // Prepare file data for pre-signed URL request
       const fileData = {
         fileName: selectedFile.name,
         fileType: selectedFile.type,
       };
 
-      // Get pre-signed URL from the backend
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/s3ThumbnailUrl`,
-        {
-          file: fileData,
-        }
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/${urlEndpoint}`,
+        { file: fileData }
       );
 
       const { url, key } = response.data;
 
-      // Upload file to S3 using the pre-signed URL
       await axios.put(url, selectedFile, {
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
+        headers: { 'Content-Type': selectedFile.type },
       });
 
-      // Construct the final URL of the uploaded video
-      const newThumbnailUrl = `https://intrend-images.s3.ap-south-1.amazonaws.com/${key}`;
+      const s3ObjectUrl = `https://captain-post-yt-bucket.s3.ap-south-1.amazonaws.com/${key}`;
 
-      setThumbnailUrl(newThumbnailUrl);
-
-      alert('Video uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      alert('Failed to upload video. Please try again.');
+      if (fileType === 'thumbnail') {
+        setThumbnailUrl(s3ObjectUrl);
+        setThumbnailKey(key);
+      } else {
+        setVideoUrl(s3ObjectUrl);
+        setVideoKey(key);
+      }
+    } catch (err) {
+      console.error(`Error uploading ${fileType}:`, err);
+      const axiosError = err as AxiosError;
+      let errorMessage = `Failed to upload ${fileType}. Please try again.`;
+      if (axiosError.response?.status === 403) {
+        errorMessage = `Upload failed: Permission denied. Please check configuration.`;
+      }
+      setError(errorMessage);
+      // Reset file input on error
+      e.target.value = '';
     } finally {
-      // Remove loading state
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleVideoInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) {
-      return;
-    }
-
-    // Add loading state
-    setIsLoading(true);
-
-    try {
-      // Prepare file data for pre-signed URL request
-      const fileData = {
-        fileName: selectedFile.name,
-        fileType: selectedFile.type,
-      };
-
-      // Get pre-signed URL from the backend
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/youtube/s3VideoUrl`,
-        {
-          file: fileData,
-        }
-      );
-
-      const { url, key } = response.data;
-
-      // Upload file to S3 using the pre-signed URL
-      await axios.put(url, selectedFile, {
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
-      });
-
-      // Construct the final URL of the uploaded video
-      const newVideoUrl = `https://intrend-images.s3.ap-south-1.amazonaws.com/${key}`;
-
-      setVideoUrl(newVideoUrl);
-
-      alert('Video uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      alert('Failed to upload video. Please try again.');
-    } finally {
-      // Remove loading state
-      setIsLoading(false);
-    }
+  const handleRemoveImage = async () => {
+    if (!thumbnailKey) return;
+    // For now, we'll just clear it from the frontend.
+    // Deleting from S3 should be handled carefully, maybe after the post is successful.
+    setThumbnailUrl(null);
+    setThumbnailKey(null);
   };
 
-  const handleRemoveImage = async (imageUrl: string) => {
-    try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/delete-s3-images`,
-        {
-          keys: [getImageKey(imageUrl)],
-        }
-      );
-      console.log(response.data.message);
-      setThumbnailUrl('');
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      alert('Failed to delete image');
-    }
-  };
-
-  const getImageKey = (imageUrl: string) => {
-    // Extract the key from the URL (assuming standard S3 URL format)
-    return imageUrl.split('.amazonaws.com/')[1];
-  };
-
-  // const dropdownOnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const { value, checked } = e.target;
-  //   const selections = selectedChannel;
-
-  //   if (checked) {
-  //     setSelectedChannel([...selections, value]);
-  //   } else {
-  //     setSelectedChannel(selectedChannel.filter((e) => e !== value));
-  //   }
-  // };
-
+  // ... (rest of the component logic like getImageKey if still needed)
   return (
-    <div className="grid grid-cols-2 h-screen">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-screen">
       <div className="overflow-y-auto overscroll-contain px-8 pb-24 flex flex-col min-h-screen">
+        {/* All inputs will now use the single state object `ytPostObj` */}
         <InputText
           type="text"
           defaultValue={ytPostObj.post_title}
@@ -224,152 +209,157 @@ export default function YtPostCreator() {
           placeholder="Enter Post title"
           updateFormValue={updateFormValue}
         />
-        {/* <InputText
-          type="text"
-          defaultValue=""
-          updateType="post_tags"
-          containerStyle="mt-2"
-          labelTitle="Post tags"
-          placeholder="Enter Post tags"
-          updateFormValue={updateFormValue}
-        /> */}
         <InputText
           type="text"
           defaultValue={ytPostObj.post_category_id}
           updateType="post_category_id"
           containerStyle="mt-2"
           labelTitle="Post Category Id"
-          placeholder="Enter Post Category Id"
+          placeholder="e.g., 22 for People & Blogs"
           updateFormValue={updateFormValue}
         />
-
-        <div className="form-control">
-          <label className="label text-sm text-white pt-4">Description</label>
-
-          <div className="border border-gray-500 text-white  rounded-lg  focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 block w-full p-2">
+        {/* Description and Thumbnail Section */}
+        <div className="form-control mt-2">
+          <label className="label text-sm text-secondary">
+            Description & Thumbnail
+          </label>
+          <div className="border border-gray-500 rounded-lg p-2">
             <textarea
               placeholder="Type your content ..."
-              className="h-32 mt-2 w-full text-sm text-white resize-none border-none bg-transparent focus:outline-none"
+              className="h-32 w-full text-sm bg-transparent resize-none border-none focus:outline-none"
+              value={ytPostObj.post_description}
               onChange={(e) =>
                 updateFormValue('post_description', e.target.value)
               }
               required
             />
-            <div>
-              <div className="flex gap-2">
-                {thumbnailUrl && (
-                  <div className="relative w-28 h-28 bg-neutral-700 rounded-lg">
-                    <div
-                      className="w-5 h-5 rounded-full bg-gray-500 absolute right-0 top-0"
-                      onClick={() => handleRemoveImage(thumbnailUrl)}
-                    >
-                      <Small_exit_icon />
-                    </div>
-                    <img
-                      className="w-full h-full object-contain rounded-lg"
-                      src={thumbnailUrl}
-                      alt=""
-                    />
-                  </div>
-                )}
+            <div className="flex items-start gap-4 mt-2">
+              {thumbnailUrl && (
+                <div className="relative w-28 h-28 bg-secondary rounded-lg">
+                  <button
+                    className="w-5 h-5 rounded-full bg-gray-500 absolute -right-1 -top-1 flex items-center justify-center"
+                    onClick={handleRemoveImage}
+                  >
+                    <Small_exit_icon />
+                  </button>
+                  <img
+                    className="w-full h-full object-contain rounded-lg"
+                    src={thumbnailUrl}
+                    alt="Thumbnail preview"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => handleFileUpload(e, 'thumbnail')}
+                  ref={imageInputRef}
+                />
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="btn btn-xs btn-primary"
+                  disabled={isThumbnailUploading}
+                >
+                  {isThumbnailUploading ? 'Uploading...' : 'Add Thumbnail'}
+                </button>
               </div>
             </div>
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleFileInputChange}
-              ref={imageInputRef}
-            />
-            <div className="flex gap-6">
-              <button
-                onClick={() => {
-                  if (imageInputRef.current) {
-                    imageInputRef.current.click();
-                  }
-                }}
-                className="btn btn-xs btn-primary"
-              >
-                Add Thumbnail
-              </button>
-            </div>
           </div>
         </div>
-        <div className="form-control ">
-          <label className="label text-sm text-white pt-4">Upload video</label>
+        {/* Video Upload Section */}
+        <div className="form-control mt-2">
+          <label className="label text-sm text-secondary">Upload video</label>
           <input
             type="file"
+            accept="video/*"
             className="file-input file-input-bordered file-input-sm file-input-primary w-full max-w-xs"
-            onChange={handleVideoInput}
+            onChange={(e) => handleFileUpload(e, 'video')}
+            ref={videoInputRef}
+            disabled={isVideoUploading}
           />
-          {isLoading && 'Uploading...'}
+          {isVideoUploading && (
+            <span className="text-sm text-secondary mt-1">
+              Uploading video, please wait...
+            </span>
+          )}
+          {videoUrl && !isVideoUploading && (
+            <span className="text-sm text-green-400 mt-1">
+              Video ready for posting.
+            </span>
+          )}
         </div>
+        {/* Scheduling Section */}
+        <div className="form-control mt-2">
+          <label className="label cursor-pointer w-52">
+            <span className="text-secondary text-md">Schedule Upload</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={isScheduled}
+              onChange={(e) => setIsScheduled(e.target.checked)}
+            />
+          </label>
+          {isScheduled && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={ytPostObj.post_scheduled_date}
+                  className="input input-bordered w-full max-w-xs "
+                  onChange={(e) =>
+                    updateFormValue('post_scheduled_date', e.target.value)
+                  }
+                />
 
-        <div className="form-control">
-          <div className="form-control w-52 pt-2">
-            <label className="label cursor-pointer">
-              <span className="text-white text-md">Schedule Upload</span>
-              <input
-                type="checkbox"
-                className="toggle toggle-primary"
-                onChange={(e) => setIsScheduled(e.target.checked)}
-              />
-            </label>
-          </div>
-          <div
-            className={`transition-all duration-300 ${
-              isScheduled
-                ? 'h-auto opacity-100'
-                : 'h-0 opacity-0 overflow-hidden'
-            }`}
-          >
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={dDate}
-                placeholder="Enter Date(YYYY-MM-DD)"
-                className="input input-bordered w-1/4 max-w-xs"
-                onChange={(e) => {
-                  updateFormValue('post_scheduled_date', e.target.value);
-                }}
-              />
-              <input
-                type="text"
-                placeholder="Enter Time(HH:mm)"
-                className="input input-bordered w-1/4 max-w-xs"
-                onChange={(e) => {
-                  updateFormValue('post_scheduled_time', e.target.value);
-                }}
-              />
-              <select
-                className="select select-bordered w-1/4 max-w-xs"
-                onChange={(e) => {
-                  updateFormValue('post_scheduled_timezone', e.target.value);
-                }}
-                defaultValue={'Select Timezone'}
-              >
-                <option disabled value="Select Timezone">
-                  Select Timezone
-                </option>
-
-                {timezones.map((timezone) => (
-                  <option key={timezone.id} value={timezone.tz}>
-                    {timezone.name}
+                <input
+                  type="time"
+                  value={ytPostObj.post_scheduled_time}
+                  className="input input-bordered w-full max-w-xs "
+                  onChange={(e) =>
+                    updateFormValue('post_scheduled_time', e.target.value)
+                  }
+                />
+                <select
+                  className="select select-bordered w-full max-w-xs"
+                  value={ytPostObj.post_scheduled_timezone}
+                  onChange={(e) =>
+                    updateFormValue('post_scheduled_timezone', e.target.value)
+                  }
+                >
+                  <option value="" disabled>
+                    Select Timezone
                   </option>
-                ))}
-              </select>
+                  {timezones.map((timezone) => (
+                    <option key={timezone.id} value={timezone.tz}>
+                      {timezone.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="modal-action mt-auto">
-          <button className="btn btn-primary px-6" onClick={handlePost}>
-            Post
+        {/* Action Buttons & Error Display */}
+        <div className="mt-auto pt-4">
+          {/* NEW: Error message display */}
+          {error && (
+            <div className="text-red-500 text-sm mb-2 text-center w-full">
+              {error}
+            </div>
+          )}
+
+          <button
+            className="btn btn-primary px-6 w-full"
+            onClick={handlePost}
+            disabled={isPosting || isVideoUploading || isThumbnailUploading}
+          >
+            {isPosting ? 'Posting...' : 'Post Now'}
           </button>
         </div>
       </div>
-
-      <div className="bg-white"></div>
     </div>
   );
 }

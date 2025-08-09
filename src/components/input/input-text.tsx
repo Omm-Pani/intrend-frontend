@@ -31,7 +31,7 @@ function InputText({
   return (
     <div className={`form-control w-full ${containerStyle}`}>
       <label className="label">
-        <span className={'text-sm text-white' + (labelStyle || '')}>
+        <span className={'text-sm text-secondary' + (labelStyle || '')}>
           {labelTitle}
         </span>
       </label>

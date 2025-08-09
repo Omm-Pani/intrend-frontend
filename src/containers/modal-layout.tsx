@@ -24,16 +24,27 @@ function ModalLayout() {
       <div className={`modal ${isOpen ? 'modal-open' : ''}`}>
         <div
           className={`${
-            fullScreen ? 'bg-base-100 w-full h-full' : 'modal-box'
+            fullScreen ? 'bg-base-100 w-full h-full relative' : 'modal-box'
           } ${size === 'lg' ? 'max-w-5xl' : ''}`}
         >
-          <button
-            className="btn btn-sm btn-circle absolute right-2 top-2"
-            onClick={() => close()}
-          >
-            ✕
-          </button>
-          <h3 className="font-semibold text-2xl pb-6 text-center">{title}</h3>
+          {fullScreen ? (
+            <button
+              className="btn btn-sm absolute right-10 top-4"
+              onClick={() => close()}
+            >
+              Close
+            </button>
+          ) : (
+            <button
+              className="btn btn-sm btn-circle absolute right-4 top-4"
+              onClick={() => close()}
+            >
+              ✕
+            </button>
+          )}
+          <h3 className="font-semibold text-2xl pb-6 pt-4 text-center">
+            {title}
+          </h3>
 
           {/* Loading modal body according to different modal type */}
           {
@@ -41,7 +52,6 @@ function ModalLayout() {
               [MODAL_BODY_TYPES.POST_TYPE_CONFIRMATION]: (
                 <PostTypeConfirmation />
               ),
-              [MODAL_BODY_TYPES.FB_POST_CREATOR]: <FbPostCreator />,
               [MODAL_BODY_TYPES.YT_POST_CREATOR]: <YtPostCreator />,
               [MODAL_BODY_TYPES.EMAIL_CREATOR]: <EmailCreator />,
               [MODAL_BODY_TYPES.CONFIRMATION]: (

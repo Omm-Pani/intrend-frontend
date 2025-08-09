@@ -85,7 +85,7 @@ function LeftSidebar(props: LeftSidebarProps) {
   const logoutUser = async () => {
     console.log('here');
     await auth.logout();
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   return (
