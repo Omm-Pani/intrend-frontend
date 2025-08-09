@@ -85,7 +85,7 @@ function Login(): JSX.Element {
                   Login to your Account
                 </h2>
                 <p className="text-gray-600 mt-2">
-                  Don'&apos;'t have an account?
+                  Don&apos;t have an account?
                   <a
                     href="/signup"
                     className="text-primary font-semibold hover:underline ml-1"
